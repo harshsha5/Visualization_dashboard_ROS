@@ -7,7 +7,7 @@ from matplotlib import animation
 from matplotlib import style
 import pdb
 from math import cos,sin,radians
-from statistics import mean
+# from statistics import mean
 
 # fig,(ax1,ax2,ax3,ax4) = plt.subplots(2,2)
 # fig,(ax1) = plt.subplots(1,1)
@@ -30,8 +30,8 @@ def animate(frames):
 	global global_waypoint_count
 	rospy.loginfo("In Animate \n")	
 	if(len(global_waypoint_distance_values)>global_waypoint_count):
-		global_waypoint_count+=1
-		average = mean(global_waypoint_distance_values) 
+		global_waypoint_count+=1 
+        average = sum(global_waypoint_distance_values) / len(global_waypoint_distance_values)
 		# string_to_display_on_graph = 'Mean: ' + str(round(average,2))  #Add appropriate units
 		# ax1.clear()
 		# ax1.scatter(range_time_values, range_values,color='blue')
