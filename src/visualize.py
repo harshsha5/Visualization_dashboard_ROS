@@ -8,6 +8,8 @@ from matplotlib import animation
 from matplotlib import style
 import pdb
 from math import cos,sin,radians
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
 
 # plt.rcParams.update({'font.size': 14})
 # import os
@@ -15,7 +17,7 @@ from math import cos,sin,radians
 
 # fig,(ax1,ax2,ax3,ax4) = plt.subplots(2,2)
 # fig,(ax1) = plt.subplots(1,1)
-fig, ax = plt.subplots()
+fig, (ax1,ax2) = plt.subplots(1,2)
 count = 0
 global_least_euclidian_distances = []
 #ax1.set_title(r'Range VS Time')
@@ -28,6 +30,12 @@ global_least_euclidian_distances = []
 # 	global global_waypoint_distance_values
 # 	global_waypoint_distance_values.append(distance.range + random.randint(1,30))
 
+def pit_image_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
+	rospy.loginfo('Image received...')
+	image = CvBridge().imgmsg_to_cv2(msg)
+	ax2.imshow(image)
+	ax2.axis('off')
+
 def get_least_euclidian_distances(global_waypoints,pit_edges):
 	least_euclidian_distances = []
 	for i in range(global_waypoints.shape[0]):
@@ -37,13 +45,13 @@ def get_least_euclidian_distances(global_waypoints,pit_edges):
 def get_global_waypoints_data():
 	pit_edges_file_name = "src/visualization/data/pit_edges.csv"
 	global_waypoints_file_name = "src/visualization/data/global_waypoints.csv"
-	global_waypoints = genfromtxt(global_waypoints_file_name, delimiter=',')
+	global_waypoints = genfromtxt(global_waypoints_file_name, delimiter=',')		#TODO: Resolution transform these global waypoints
 	pit_edges = genfromtxt(pit_edges_file_name, delimiter=',')
 	least_euclidian_distances = get_least_euclidian_distances(global_waypoints,pit_edges)
 	return least_euclidian_distances
 
 def animate(frames):
-	global ax
+	global ax1
 	# global ax2
 	# global ax3
 	# global global_waypoint_distance_values
@@ -60,53 +68,32 @@ def animate(frames):
 	else:
 		least_euclidian_distances = global_least_euclidian_distances
 
-	ax.clear()
+	ax1.clear()
 	average = sum(least_euclidian_distances) / len(least_euclidian_distances)
 	x = np.arange(len(least_euclidian_distances))  # the label locations
 	width = 0.35  # the width of the bars
 
-	rects1 = ax.bar(x - width/2, least_euclidian_distances, width, label='')
+	rects1 = ax1.bar(x - width/2, least_euclidian_distances, width, label='')
 
 	# Add some text for labels, title and custom x-axis tick labels, etc.
-	ax.set_ylabel('Distance of global waypoints from pit edge (m)')
-	ax.set_title('Distances of global waypoints from pit edge')
-	ax.hlines(y=average, xmin=-1, xmax=len(x), linestyle='--', color='r')
-	plt.text(-1*0.9, average*1.05, 'Mean: {:.2f}'.format(average))
-	ax.set_xticks(x)
-	ax.set_xticklabels(x)
-	ax.legend()
-	autolabel(rects1)
+	ax1.set_ylabel('Distance of global waypoints from pit edge (m)')
+	ax1.set_title('Distances of global waypoints from pit edge')
+	ax1.hlines(y=average, xmin=-1, xmax=len(x), linestyle='--', color='r')
+	ax1.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(average))
+	ax1.set_xticks(x)
+	ax1.set_xticklabels(x)
+	ax1.legend()
+	autolabel(rects1,ax1)
+
+	# image_path = "src/visualization/data/index.jpeg"
+	# img = plt.imread(image_path)
+	# ax2.imshow(img)
+	# ax2.axis('off')
+
 	fig.tight_layout()
 
-	
-	# if(len(global_waypoint_distance_values)>global_waypoint_count):
-	# 	global_waypoint_count+=1 
-    #     average = sum(global_waypoint_distance_values) / len(global_waypoint_distance_values)
-	# 	# string_to_display_on_graph = 'Mean: ' + str(round(average,2))  #Add appropriate units
-	# 	# ax1.clear()
-	# 	# ax1.scatter(range_time_values, range_values,color='blue')
-	# 	# ax1.annotate(string_to_display_on_graph,xy=(0.5, 0.9), xycoords="axes fraction")
-	# 	#ax2.set_yticks(np.arange(min(range_values),max(range_values)+1))
-	# 	#max value can also be plotted. max_value is being maintained
-
-    #     x = np.arange(global_waypoint_count)  # the label locations
-    #     width = 0.35  # the width of the bars
-
-    #     rects1 = ax.bar(x - width/2, global_waypoint_distance_values, width, label='')
-
-    #     # Add some text for labels, title and custom x-axis tick labels, etc.
-    #     ax.set_ylabel('Distance of global waypoints from pit edge')
-    #     ax.set_title('Distances of global waypoints from pit edge')
-    #     ax.set_xticks(x)
-    #     ax.set_xticklabels(x)
-    #     ax.legend()
-    #     autolabel(rects1)
-    #     fig.tight_layout()
-
-
-def autolabel(rects):
+def autolabel(rects,ax):
     """Attach a text label above each bar in *rects*, displaying its height."""
-    global ax
     for rect in rects:
         height = rect.get_height()
         ax.annotate('{0:.2f}'.format(height),
@@ -128,7 +115,8 @@ def autolabel(rects):
 if __name__ == '__main__':
 	rospy.init_node('visualize', anonymous=True)
 	# rospy.Subscriber("/global_waypoint_dist", Range, global_waypoint_dist_callback)
-	rate = rospy.Rate(10)
+	rospy.Subscriber("/apnapioneer3at/MultiSense_S21_meta_camera/image",Image,pit_image_callback)
+	rate = rospy.Rate(50)
 	rospy.loginfo("In Main \n")
 	ani = animation.FuncAnimation(fig,animate,frames = None,interval = 50)
 	while not rospy.is_shutdown():
