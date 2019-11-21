@@ -57,7 +57,8 @@ def animate(frames):
 		count+=1
 	else:
 		least_euclidian_distances = global_least_euclidian_distances
-
+		
+	ax.clear()
 	average = sum(least_euclidian_distances) / len(least_euclidian_distances)
 	x = np.arange(len(least_euclidian_distances))  # the label locations
 	width = 0.35  # the width of the bars
@@ -67,6 +68,7 @@ def animate(frames):
 	# Add some text for labels, title and custom x-axis tick labels, etc.
 	ax.set_ylabel('Distance of global waypoints from pit edge')
 	ax.set_title('Distances of global waypoints from pit edge')
+	ax.plot(x,[average]*len(x), label='Mean', linestyle='--',color='green')
 	ax.set_xticks(x)
 	ax.set_xticklabels(x)
 	ax.legend()
