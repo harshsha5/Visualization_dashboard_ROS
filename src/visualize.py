@@ -8,6 +8,8 @@ from matplotlib import animation
 from matplotlib import style
 import pdb
 from math import cos,sin,radians
+
+# plt.rcParams.update({'font.size': 14})
 # import os
 # from statistics import mean
 
@@ -57,7 +59,7 @@ def animate(frames):
 		count+=1
 	else:
 		least_euclidian_distances = global_least_euclidian_distances
-		
+
 	ax.clear()
 	average = sum(least_euclidian_distances) / len(least_euclidian_distances)
 	x = np.arange(len(least_euclidian_distances))  # the label locations
@@ -66,9 +68,10 @@ def animate(frames):
 	rects1 = ax.bar(x - width/2, least_euclidian_distances, width, label='')
 
 	# Add some text for labels, title and custom x-axis tick labels, etc.
-	ax.set_ylabel('Distance of global waypoints from pit edge')
+	ax.set_ylabel('Distance of global waypoints from pit edge (m)')
 	ax.set_title('Distances of global waypoints from pit edge')
-	ax.plot(x,[average]*len(x), label='Mean', linestyle='--',color='green')
+	ax.hlines(y=average, xmin=-1, xmax=len(x), linestyle='--', color='r')
+	plt.text(-1*0.9, average*1.05, 'Mean: {:.2f}'.format(average))
 	ax.set_xticks(x)
 	ax.set_xticklabels(x)
 	ax.legend()
