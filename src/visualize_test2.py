@@ -29,6 +29,8 @@ global_waypoints_threshold_distance = 15	# distance in (m)
 local_waypoints_threshold_distance = 1	# distance in (m)
 g_local_waypoint_count = 0
 g_local_waypoints = np.zeros(1)	#Random default initialization
+GLOBAL_MAP_RESOLUTION = 5
+GLOBAL_WAYPOINT_METRIC = 0.8	#80%
 
 #==========================================================================================================================================
 #ax1.set_title(r'Range VS Time')
@@ -52,7 +54,6 @@ def pit_image_callback(msg):			#Use the msg.flag to see if you need to keep publ
 	ax2.axis('off')
 
 def get_least_euclidian_distances(global_waypoints,pit_edges,distance_threshold):
-	print(distance_threshold)
 	least_euclidian_distances = []
 	number_of_waypoints_within_threshold = 0
 	for i in range(global_waypoints.shape[0]):
@@ -64,10 +65,14 @@ def get_least_euclidian_distances(global_waypoints,pit_edges,distance_threshold)
 
 	return least_euclidian_distances,number_of_waypoints_within_threshold
 
+def transform_global_waypoints(global_waypoints):
+	return global_waypoints*GLOBAL_MAP_RESOLUTION + GLOBAL_MAP_RESOLUTION/2
+
 def get_global_waypoints_data():
 	pit_edges_file_name = "src/visualization/data/pit_edges.csv"
 	global_waypoints_file_name = "src/visualization/data/global_waypoints.csv"
 	global_waypoints = genfromtxt(global_waypoints_file_name, delimiter=',')		#TODO: Resolution transform these global waypoints
+	global_waypoints = transform_global_waypoints(global_waypoints)
 	pit_edges = genfromtxt(pit_edges_file_name, delimiter=',')
 	least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(global_waypoints,pit_edges,global_waypoints_threshold_distance)
 	return least_euclidian_distances,pit_edges,number_of_waypoints_within_threshold
@@ -76,29 +81,6 @@ def local_waypoints_callback(msg):			#Use the msg.flag to see if this is the las
 	rospy.loginfo('New local waypoint received...')
 	if(msg.flag):
 		local_least_euclidian_distances.append(np.asscalar(np.min(np.linalg.norm(np.array([msg.x,msg.y]) - global_pit_edges, axis=1))))
-
-# def plot_video():
-# 	global ax3
-# 	filename = 'src/visualization/data/test_vid.mp4'
-# 	cap = cv2.VideoCapture(filename)
-
-# 	frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-# 	# width  = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
-# 	# height = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-
-# 	# fig, ax = plt.subplots(1,1)
-# 	# plt.ion()
-# 	# plt.show()
-
-# 	#Setup a dummy path
-
-# 	for i in range(frames):
-# 		fig.clf()
-# 		flag, frame = cap.read()
-
-# 		ax3.imshow(frame)
-# 		if cv2.waitKey(1) == 27:
-# 			break 
 
 def set_font_size(ax):
 	for label in (ax.get_xticklabels() + ax.get_yticklabels()):
@@ -111,9 +93,8 @@ def animate(frames):
 	# global ax3
 	# global global_waypoint_distance_values
 	# global global_waypoint_count
+	global global_waypoints_threshold_distance
 	global g_number_of_waypoints_within_threshold
-	global index
-	global inF
 	global count
 	global global_least_euclidian_distances
 	global global_pit_edges
@@ -133,7 +114,7 @@ def animate(frames):
 		number_of_waypoints_within_threshold = g_number_of_waypoints_within_threshold
 
 	ax1.clear()
-	average = sum(least_euclidian_distances) / len(least_euclidian_distances)
+	# average = sum(least_euclidian_distances) / len(least_euclidian_distances)
 	x = np.arange(len(least_euclidian_distances))  # the label locations
 	width = 0.35  # the width of the bars
 
@@ -144,18 +125,25 @@ def animate(frames):
 	ax1.set_xlabel('Global Waypoint number',fontsize=28)
 	set_font_size(ax1)
 	ax1.set_title('Distances of global waypoints from pit edge',fontsize=28)
-	ax1.hlines(y=average, xmin=-1, xmax=len(x), linestyle='--', color='r')
-	ax1.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(average),fontsize=28)
+	ax1.hlines(y=global_waypoints_threshold_distance, xmin=-20, xmax=len(x), linestyle='--', color='r')
+	ax1.text(-18, global_waypoints_threshold_distance*1.02, 'Threshold value',fontsize=20)
+	# ax1.text(-20, global_waypoints_threshold_distance*1.02, 'Threshold distance: {:.2f}'.format(global_waypoints_threshold_distance),fontsize=20)
 
 	# place a text box in upper left in axes coords
-	textstr = '% of waypoints within threshold: {:.2f}'.format(number_of_waypoints_within_threshold*100/len(least_euclidian_distances))
-	props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-	ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14,
+	metric = number_of_waypoints_within_threshold*100/len(least_euclidian_distances)
+	textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
+	if(metric>GLOBAL_WAYPOINT_METRIC):
+		props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+	else:
+		props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
+
+	ax1.text(0.02, 0.99, textstr, transform=ax1.transAxes, fontsize=22,
         verticalalignment='top', bbox=props, weight='bold')
-	ax1.set_xticks(x)
-	ax1.set_xticklabels(x)
+	# ax1.set_xticks(x)
+	# ax1.set_xticklabels(x)
+	ax2.get_xaxis().set_ticks([])
 	ax1.legend()
-	autolabel(rects1,ax1)
+	# autolabel(rects1,ax1)
 	# fig.tight_layout()
 
 	''' Future code to be used once Ayush's topic exists'''

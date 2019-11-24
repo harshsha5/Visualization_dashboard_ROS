@@ -69,7 +69,7 @@ def animate(frames):
 			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
 		else:
 			props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
-		ax2.text(0.05, 0.95, textstr, transform=ax2.transAxes, fontsize=14,verticalalignment='top', bbox=props, weight='bold')
+		ax2.text(0.05, 0.95, textstr, transform=ax2.transAxes, fontsize=22,verticalalignment='top', bbox=props, weight='bold')
 		ax2.set_xticks(x)
 		ax2.set_xticklabels(x)
 		ax2.get_xaxis().set_ticks([])
