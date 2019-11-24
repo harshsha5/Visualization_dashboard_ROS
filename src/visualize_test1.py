@@ -9,97 +9,80 @@ from matplotlib import style
 import pdb
 from math import cos,sin,radians
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32
 import cv2
 
 #=========================================================================================================================================
 
 fig, (ax1,ax2) = plt.subplots(1,2)
 counter = 0
+g_rock_dist = []
+g_rock_dist_count = 0
+g_rock_dist_counter = 0
+ROCK_DIST_THRESHOLD = 0.5
+ROCK_DIST_PUBLISH_FREQ = 25
 
 #==========================================================================================================================================
 
-def odom_callback(odom_data):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
-    global counter
-    rospy.sleep(1)
-    curr_time = odom_data.header.stamp
-    pose = odom_data.pose.pose #  the x,y,z pose and quaternion orientation
-    counter= counter+1
-    print(counter, curr_time)
-    print (pose)
+# def odom_callback(odom_data):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
+#     global counter
+#     rospy.sleep(1)
+#     curr_time = odom_data.header.stamp
+#     pose = odom_data.pose.pose #  the x,y,z pose and quaternion orientation
+#     counter= counter+1
+#     print(counter, curr_time)
+#     print (pose)
+
+def rock_dist_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
+	global g_rock_dist_counter
+	g_rock_dist_counter+=1
+	if(g_rock_dist_counter%ROCK_DIST_PUBLISH_FREQ==0):
+		g_rock_dist.append(msg.data)
 
 def set_font_size(ax):
-	for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+	for label in (ax.get_yticklabels()):
 		label.set_fontname('Arial')
 		label.set_fontsize(28)
 
-# def animate(frames):
-# 	global ax1
-# 	# global ax2
-# 	# global ax3
-# 	# global global_waypoint_distance_values
-# 	# global global_waypoint_count
-# 	global g_number_of_waypoints_within_threshold
-# 	global index
-# 	global inF
-# 	global count
-# 	global global_least_euclidian_distances
-# 	global global_pit_edges
-# 	rospy.loginfo("In Animate \n")
+def animate(frames):
+	global ax1
+	global ax2
+	global g_rock_dist_count
+	rospy.loginfo("In Animate \n")
 
-# 	if(count==0):
-# 		least_euclidian_distances,pit_edges,number_of_waypoints_within_threshold = get_global_waypoints_data()	
-# 		global_least_euclidian_distances = least_euclidian_distances
-# 		g_number_of_waypoints_within_threshold = number_of_waypoints_within_threshold
-# 		global_pit_edges = pit_edges
-# 		print("Distances calculated")
-# 		count+=1
-# 	else:
-# 		least_euclidian_distances = global_least_euclidian_distances
-# 		number_of_waypoints_within_threshold = g_number_of_waypoints_within_threshold
+	if(g_rock_dist_count<len(g_rock_dist)):
+		g_rock_dist_count +=1
+		plot_len = min(g_rock_dist_count,len(g_rock_dist))
+		ax2.clear()
+		x = np.arange(plot_len)
+		fail_count = len([i for i in g_rock_dist[0:plot_len] if i > ROCK_DIST_THRESHOLD]) 
+		ax2.plot(x, g_rock_dist[0:plot_len])
+		ax2.set_ylabel('Distance of rover from nearest rock (m)',fontsize=28)
+		ax2.set_xlabel('Time index')
+		ax2.set_title('Obstacles Avoidance Test',fontsize=28)
+		set_font_size(ax2)
 
-# 	ax1.clear()
-# 	average = sum(least_euclidian_distances) / len(least_euclidian_distances)
-# 	x = np.arange(len(least_euclidian_distances))  # the label locations
-# 	width = 0.35  # the width of the bars
-
-# 	rects1 = ax1.bar(x - width/2, least_euclidian_distances, width, label='')
-
-# 	# _, ymax = ax1.get_ylim()
-# 	ax1.set_ylabel('Distance of global waypoints from pit edge (m)',fontsize=28)
-# 	ax1.set_xlabel('Global Waypoint number',fontsize=28)
-# 	set_font_size(ax1)
-# 	ax1.set_title('Distances of global waypoints from pit edge',fontsize=28)
-# 	ax1.hlines(y=average, xmin=-1, xmax=len(x), linestyle='--', color='r')
-# 	ax1.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(average),fontsize=28)
-
-# 	# place a text box in upper left in axes coords
-# 	textstr = '% of waypoints within threshold: {:.2f}'.format(number_of_waypoints_within_threshold*100/len(least_euclidian_distances))
-# 	props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-# 	ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14,
-#         verticalalignment='top', bbox=props, weight='bold')
-# 	ax1.set_xticks(x)
-# 	ax1.set_xticklabels(x)
-# 	ax1.legend()
-# 	autolabel(rects1,ax1)
-# 	# fig.tight_layout()
-
-def autolabel(rects,ax):
-    """Attach a text label above each bar in *rects*, displaying its height."""
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate('{0:.2f}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom',size=15)
+		# place a text box in upper left in axes coords
+		metric = (g_rock_dist_count-fail_count)*100/g_rock_dist_count
+		textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
+		if(metric>0.8):
+			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+		else:
+			props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
+		ax2.text(0.05, 0.95, textstr, transform=ax2.transAxes, fontsize=14,verticalalignment='top', bbox=props, weight='bold')
+		ax2.set_xticks(x)
+		ax2.set_xticklabels(x)
+		ax2.get_xaxis().set_ticks([])
+		ax2.legend()
 
 
 if __name__ == '__main__':
 	rospy.init_node('visualize_test1', anonymous=True)
-	rospy.Subscriber("/odometry_ground_truth",Odometry,odom_callback)
+	# rospy.Subscriber("/odometry_ground_truth",Odometry,odom_callback)
+	rospy.Subscriber("/min_rock_dist",Float32,rock_dist_callback)
 	rate = rospy.Rate(10)
 	rospy.loginfo("In Main \n")
-	# ani = animation.FuncAnimation(fig,animate,frames = None,interval = 10)
+	ani = animation.FuncAnimation(fig,animate,frames = None,interval = 10)
 	while not rospy.is_shutdown():
 		plt.show()
 		rate.sleep()
