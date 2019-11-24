@@ -11,9 +11,10 @@ from math import cos,sin,radians
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import cv2
-import skvideo
-# skvideo.setFFmpegPath('/usr/local/lib/python2.7/dist-packages/ffmpeg/')
-import skvideo.io
+from nav_msgs.msg import Odometry
+# import skvideo
+# # skvideo.setFFmpegPath('/usr/local/lib/python2.7/dist-packages/ffmpeg/')
+# import skvideo.io
 
 #=========================================================================================================================================
 
@@ -25,8 +26,9 @@ global_pit_edges = []
 local_least_euclidian_distances = []
 g_number_of_waypoints_within_threshold = 0
 global_waypoints_threshold_distance = 15	# distance in (m)
-index =0
-inF=skvideo.io.vread('src/visualization/data/test_vid.mp4')
+local_waypoints_threshold_distance = 1	# distance in (m)
+g_local_waypoint_count = 0
+g_local_waypoints = np.zeros(1)	#Random default initialization
 
 #==========================================================================================================================================
 #ax1.set_title(r'Range VS Time')
@@ -35,9 +37,13 @@ inF=skvideo.io.vread('src/visualization/data/test_vid.mp4')
 # global_waypoint_count = 0 	#to see how any entries range values has and then plot only when new values come
 # global_waypoints_mean_distance = 0
 
-# def global_waypoint_dist_callback(distance):
-# 	global global_waypoint_distance_values
-# 	global_waypoint_distance_values.append(distance.range + random.randint(1,30))
+def local_waypoint_callback(msg):
+	global g_local_waypoints
+	global g_local_waypoint_count
+	if(g_local_waypoint_count==0):
+		g_local_waypoints = np.array([[msg.x,msg.y]])
+	else:
+		g_local_waypoints = np.vstack((g_local_waypoints,np.array([[msg.x,msg.y]])))
 
 def pit_image_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
 	rospy.loginfo('Image received...')
@@ -45,14 +51,15 @@ def pit_image_callback(msg):			#Use the msg.flag to see if you need to keep publ
 	ax2.imshow(image)
 	ax2.axis('off')
 
-def get_least_euclidian_distances(global_waypoints,pit_edges):
+def get_least_euclidian_distances(global_waypoints,pit_edges,distance_threshold):
+	print(distance_threshold)
 	least_euclidian_distances = []
 	number_of_waypoints_within_threshold = 0
 	for i in range(global_waypoints.shape[0]):
 		dist = np.asscalar(np.min(np.linalg.norm(global_waypoints[i,:] - pit_edges, axis=1)))
 		least_euclidian_distances.append(dist)
 
-		if(dist<global_waypoints_threshold_distance):
+		if(dist<distance_threshold):
 			number_of_waypoints_within_threshold+=1
 
 	return least_euclidian_distances,number_of_waypoints_within_threshold
@@ -62,7 +69,7 @@ def get_global_waypoints_data():
 	global_waypoints_file_name = "src/visualization/data/global_waypoints.csv"
 	global_waypoints = genfromtxt(global_waypoints_file_name, delimiter=',')		#TODO: Resolution transform these global waypoints
 	pit_edges = genfromtxt(pit_edges_file_name, delimiter=',')
-	least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(global_waypoints,pit_edges)
+	least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(global_waypoints,pit_edges,global_waypoints_threshold_distance)
 	return least_euclidian_distances,pit_edges,number_of_waypoints_within_threshold
 
 def local_waypoints_callback(msg):			#Use the msg.flag to see if this is the last point before the state machien transitions for a new state
@@ -110,6 +117,8 @@ def animate(frames):
 	global count
 	global global_least_euclidian_distances
 	global global_pit_edges
+	global g_local_waypoints
+	global g_local_waypoint_count
 	rospy.loginfo("In Animate \n")
 
 	if(count==0):
@@ -150,20 +159,28 @@ def animate(frames):
 	# fig.tight_layout()
 
 	''' Future code to be used once Ayush's topic exists'''
-	# ax2.clear()
-	# local_average = sum(local_least_euclidian_distances) / len(local_least_euclidian_distances)
-	# local_x = np.arange(len(least_euclidian_distances))
-	# rects2 = ax2.bar(local_x - width/2, local_least_euclidian_distances, width, label='')
+	# if(g_local_waypoint_count<g_local_waypoints.shape[0]):
+	# 	g_local_waypoint_count+=1
+	# 	ax2.clear()
+	# 	local_least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(g_local_waypoints,global_pit_edges,local_waypoints_threshold_distance)
+	# 	local_average = sum(local_least_euclidian_distances) / len(local_least_euclidian_distances)
+	# 	local_x = np.arange(len(local_least_euclidian_distances))
+	# 	rects2 = ax2.bar(local_x - width/2, local_least_euclidian_distances, width, label='')
 
-	# ax2.set_ylabel('Distance of local waypoints from pit edge (m)')
-	# ax2.set_title('Distances of local waypoints from pit edge')
-	# set_font_size(ax2)
-	# ax2.hlines(y=local_average, xmin=-1, xmax=len(local_x), linestyle='--', color='r')
-	# ax2.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(local_average))
-	# ax2.set_xticks(local_x)
-	# ax2.set_xticklabels(local_x)
-	# ax2.legend()
-	# autolabel(rects2,ax2)	
+	# 	ax3.set_ylabel('Distance of local waypoints from pit edge (m)',fontsize=28)
+	# 	ax3.set_xlabel('Local Waypoint number',fontsize=28)
+	# 	ax3.set_title('Distances of local waypoints from pit edge',fontsize=28)
+	# 	set_font_size(ax3)
+	# 	ax3.hlines(y=local_average, xmin=-1, xmax=len(local_x), linestyle='--', color='r')
+	# 	ax3.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(local_average),fontsize=28)
+
+	# 	# place a text box in upper left in axes coords
+	# 	textstr = '% of waypoints within threshold: {:.2f}'.format(number_of_waypoints_within_threshold*100/len(local_least_euclidian_distances))
+	# 	ax3.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14,verticalalignment='top', bbox=props, weight='bold')
+	# 	ax3.set_xticks(local_x)
+	# 	ax3.set_xticklabels(local_x)
+	# 	ax3.legend()
+	# 	autolabel(rects2,ax3)	
 
 	'''Plot Video'''
 	# pdb.set_trace()
@@ -172,10 +189,10 @@ def animate(frames):
 	# 	im1 = ax1.imshow(grab_frame(i))
 	# 	im1.set_data(grab_frame(i))
 
-def grab_frame(i):
-	global inF
-	frame = inF[i]
-	return cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+# def grab_frame(i):
+# 	global inF
+# 	frame = inF[i]
+# 	return cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
 
 def autolabel(rects,ax):
     """Attach a text label above each bar in *rects*, displaying its height."""
@@ -192,6 +209,7 @@ if __name__ == '__main__':
 	rospy.init_node('visualize', anonymous=True)
 	# rospy.Subscriber("/global_waypoint_dist", Range, global_waypoint_dist_callback)
 	rospy.Subscriber("/apnapioneer3at/MultiSense_S21_meta_camera/image",Image,pit_image_callback)
+	# rospy.Subscriber("/robot_at_edge_position",Odometry,local_waypoint_callback)
 	rate = rospy.Rate(50)
 	rospy.loginfo("In Main \n")
 	ani = animation.FuncAnimation(fig,animate,frames = None,interval = 50)
