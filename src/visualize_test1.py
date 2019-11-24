@@ -10,6 +10,7 @@ import pdb
 from math import cos,sin,radians
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32
+from std_msgs.msg import Float64
 import cv2
 
 #=========================================================================================================================================
@@ -21,17 +22,18 @@ g_rock_dist_count = 0
 g_rock_dist_counter = 0
 ROCK_DIST_THRESHOLD = 0.5
 ROCK_DIST_PUBLISH_FREQ = 25
+ROCK_TEST_THRESHOLD = 0.8
+
+g_odom_error_list = []
+g_odom_error_count = 0
+ODOM_ERROR_MEAN_THRESHOLD = 0.005
+ODOM_TEST_THRESHOLD = 0.95
 
 #==========================================================================================================================================
 
-# def odom_callback(odom_data):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
-#     global counter
-#     rospy.sleep(1)
-#     curr_time = odom_data.header.stamp
-#     pose = odom_data.pose.pose #  the x,y,z pose and quaternion orientation
-#     counter= counter+1
-#     print(counter, curr_time)
-#     print (pose)
+def odom_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
+	global g_odom_error_list
+	g_odom_error_list.append(msg.data)
 
 def rock_dist_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
 	global g_rock_dist_counter
@@ -48,6 +50,9 @@ def animate(frames):
 	global ax1
 	global ax2
 	global g_rock_dist_count
+	global g_odom_error_count
+	global ROCK_TEST_THRESHOLD
+	global ODOM_TEST_THRESHOLD
 	rospy.loginfo("In Animate \n")
 
 	if(g_rock_dist_count<len(g_rock_dist)):
@@ -65,7 +70,7 @@ def animate(frames):
 		# place a text box in upper left in axes coords
 		metric = (g_rock_dist_count-fail_count)*100/g_rock_dist_count
 		textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
-		if(metric>0.8):
+		if(metric>ROCK_TEST_THRESHOLD):
 			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
 		else:
 			props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
@@ -75,10 +80,35 @@ def animate(frames):
 		ax2.get_xaxis().set_ticks([])
 		ax2.legend()
 
+	if(g_odom_error_count<len(g_odom_error_list)):
+		g_odom_error_count +=1
+		plot_len = min(g_odom_error_count,len(g_odom_error_list))
+		ax1.clear()
+		x = np.arange(plot_len)
+		fail_count = len([i for i in g_odom_error_list[0:plot_len] if i > ODOM_ERROR_MEAN_THRESHOLD]) 
+		ax1.plot(x, g_odom_error_list[0:plot_len])
+		ax1.set_ylabel('Odometry drift relative to ground truth',fontsize=28)
+		ax1.set_xlabel('Time index')
+		ax1.set_title('Odometry Validation Test',fontsize=28)
+		set_font_size(ax1)
+
+		# place a text box in upper left in axes coords
+		metric = (g_odom_error_count-fail_count)*100/g_odom_error_count
+		textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
+		if(metric>ODOM_TEST_THRESHOLD):
+			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+		else:
+			props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
+		ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=22,verticalalignment='top', bbox=props, weight='bold')
+		ax1.set_xticks(x)
+		ax1.set_xticklabels(x)
+		ax1.get_xaxis().set_ticks([])
+		ax1.legend()
+
 
 if __name__ == '__main__':
 	rospy.init_node('visualize_test1', anonymous=True)
-	# rospy.Subscriber("/odometry_ground_truth",Odometry,odom_callback)
+	rospy.Subscriber("/odom_error",Float64,odom_callback)
 	rospy.Subscriber("/min_rock_dist",Float32,rock_dist_callback)
 	rate = rospy.Rate(10)
 	rospy.loginfo("In Main \n")

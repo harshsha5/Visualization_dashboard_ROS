@@ -28,7 +28,7 @@ g_number_of_waypoints_within_threshold = 0
 global_waypoints_threshold_distance = 15	# distance in (m)
 local_waypoints_threshold_distance = 1	# distance in (m)
 g_local_waypoint_count = 0
-g_local_waypoints = np.zeros(1)	#Random default initialization
+g_local_waypoints = np.array([[0,0]])	#Random default initialization
 GLOBAL_MAP_RESOLUTION = 5
 GLOBAL_WAYPOINT_METRIC = 0.8	#80%
 LOCAL_WAYPOINT_METRIC = 0.6	#60%
@@ -70,8 +70,10 @@ def transform_global_waypoints(global_waypoints):
 	return global_waypoints*GLOBAL_MAP_RESOLUTION + GLOBAL_MAP_RESOLUTION/2
 
 def get_global_waypoints_data():
-	pit_edges_file_name = "src/visualization/data/pit_edges.csv"
-	global_waypoints_file_name = "src/visualization/data/global_waypoints.csv"
+	path = str(rospy.get_param("/visualization_path"))
+	# path = rospy.get_param("path")
+	pit_edges_file_name = path + "/data/pit_edges.csv"
+	global_waypoints_file_name = path + "/data/global_waypoints.csv"
 	global_waypoints = genfromtxt(global_waypoints_file_name, delimiter=',')		#TODO: Resolution transform these global waypoints
 	global_waypoints = transform_global_waypoints(global_waypoints)
 	pit_edges = genfromtxt(pit_edges_file_name, delimiter=',')
