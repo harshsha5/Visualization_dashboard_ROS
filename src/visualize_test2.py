@@ -31,6 +31,7 @@ g_local_waypoint_count = 0
 g_local_waypoints = np.zeros(1)	#Random default initialization
 GLOBAL_MAP_RESOLUTION = 5
 GLOBAL_WAYPOINT_METRIC = 0.8	#80%
+LOCAL_WAYPOINT_METRIC = 0.6	#60%
 
 #==========================================================================================================================================
 #ax1.set_title(r'Range VS Time')
@@ -147,28 +148,36 @@ def animate(frames):
 	# fig.tight_layout()
 
 	''' Future code to be used once Ayush's topic exists'''
-	# if(g_local_waypoint_count<g_local_waypoints.shape[0]):
-	# 	g_local_waypoint_count+=1
-	# 	ax2.clear()
-	# 	local_least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(g_local_waypoints,global_pit_edges,local_waypoints_threshold_distance)
-	# 	local_average = sum(local_least_euclidian_distances) / len(local_least_euclidian_distances)
-	# 	local_x = np.arange(len(local_least_euclidian_distances))
-	# 	rects2 = ax2.bar(local_x - width/2, local_least_euclidian_distances, width, label='')
+	if(g_local_waypoint_count<g_local_waypoints.shape[0]):
+		g_local_waypoint_count+=1
+		plot_len = min(g_local_waypoint_count,g_local_waypoints.shape[0])
+		ax2.clear()
+		pdb.set_trace()
+		local_least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(g_local_waypoints[0:plot_len,:],global_pit_edges,local_waypoints_threshold_distance)
+		# local_average = sum(local_least_euclidian_distances) / len(local_least_euclidian_distances)
+		local_x = np.arange(len(local_least_euclidian_distances))
+		rects2 = ax2.bar(local_x - width/2, local_least_euclidian_distances, width, label='')
 
-	# 	ax3.set_ylabel('Distance of local waypoints from pit edge (m)',fontsize=28)
-	# 	ax3.set_xlabel('Local Waypoint number',fontsize=28)
-	# 	ax3.set_title('Distances of local waypoints from pit edge',fontsize=28)
-	# 	set_font_size(ax3)
-	# 	ax3.hlines(y=local_average, xmin=-1, xmax=len(local_x), linestyle='--', color='r')
-	# 	ax3.text(-1*0.9, average*1.02, 'Mean: {:.2f}'.format(local_average),fontsize=28)
+		ax3.set_ylabel('Distance of local waypoints from pit edge (m)',fontsize=28)
+		ax3.set_xlabel('Local Waypoint number',fontsize=28)
+		ax3.set_title('Distances of local waypoints from pit edge',fontsize=28)
+		set_font_size(ax3)
+		ax3.hlines(y=local_waypoints_threshold_distance, xmin=-20, xmax=len(local_x), linestyle='--', color='r')
+		ax3.text(-18, local_waypoints_threshold_distance*1.02, 'Threshold value',fontsize=20)
 
-	# 	# place a text box in upper left in axes coords
-	# 	textstr = '% of waypoints within threshold: {:.2f}'.format(number_of_waypoints_within_threshold*100/len(local_least_euclidian_distances))
-	# 	ax3.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14,verticalalignment='top', bbox=props, weight='bold')
-	# 	ax3.set_xticks(local_x)
-	# 	ax3.set_xticklabels(local_x)
-	# 	ax3.legend()
-	# 	autolabel(rects2,ax3)	
+		# place a text box in upper left in axes coords
+		local_metric = number_of_waypoints_within_threshold*100/len(local_least_euclidian_distances)
+		textstr = '% of waypoints within threshold: {:.2f}'.format(local_metric)
+		if(metric>LOCAL_WAYPOINT_METRIC):
+			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+		else:
+			props = dict(boxstyle='round', facecolor='darksalmon', alpha=0.5)
+
+		ax3.text(0.02, 0.99, textstr, transform=ax3.transAxes, fontsize=14,verticalalignment='top', bbox=props, weight='bold')
+		ax3.set_xticks(local_x)
+		ax3.set_xticklabels(local_x)
+		ax3.legend()
+		autolabel(rects2,ax3)	
 
 	'''Plot Video'''
 	# pdb.set_trace()
@@ -197,7 +206,7 @@ if __name__ == '__main__':
 	rospy.init_node('visualize', anonymous=True)
 	# rospy.Subscriber("/global_waypoint_dist", Range, global_waypoint_dist_callback)
 	rospy.Subscriber("/apnapioneer3at/MultiSense_S21_meta_camera/image",Image,pit_image_callback)
-	# rospy.Subscriber("/robot_at_edge_position",Odometry,local_waypoint_callback)
+	rospy.Subscriber("/robot_at_edge_position",Odometry,local_waypoint_callback)
 	rate = rospy.Rate(50)
 	rospy.loginfo("In Main \n")
 	ani = animation.FuncAnimation(fig,animate,frames = None,interval = 50)
