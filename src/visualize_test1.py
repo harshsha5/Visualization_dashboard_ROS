@@ -22,12 +22,12 @@ g_rock_dist_count = 0
 g_rock_dist_counter = 0
 ROCK_DIST_THRESHOLD = 0.5
 ROCK_DIST_PUBLISH_FREQ = 25
-ROCK_TEST_THRESHOLD = 0.8
+ROCK_TEST_THRESHOLD = 80
 
 g_odom_error_list = []
 g_odom_error_count = 0
 ODOM_ERROR_MEAN_THRESHOLD = 0.005
-ODOM_TEST_THRESHOLD = 0.95
+ODOM_TEST_THRESHOLD = 95
 
 #==========================================================================================================================================
 
@@ -60,7 +60,7 @@ def animate(frames):
 		plot_len = min(g_rock_dist_count,len(g_rock_dist))
 		ax2.clear()
 		x = np.arange(plot_len)
-		fail_count = len([i for i in g_rock_dist[0:plot_len] if i > ROCK_DIST_THRESHOLD]) 
+		fail_count = len([i for i in g_rock_dist[0:plot_len] if i < ROCK_DIST_THRESHOLD]) 
 		ax2.plot(x, g_rock_dist[0:plot_len])
 		ax2.set_ylabel('Distance of rover from nearest rock (m)',fontsize=28)
 		ax2.set_xlabel('Time index')
@@ -69,7 +69,9 @@ def animate(frames):
 
 		# place a text box in upper left in axes coords
 		metric = (g_rock_dist_count-fail_count)*100/g_rock_dist_count
-		textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
+		textstr = '% of times rover successfully avoids obstacles upto threshold distance limit: {:.2f}'.format(metric)
+		ax2.hlines(y=ROCK_DIST_THRESHOLD, xmin=x[0]-1, xmax=len(x), linestyle='--', color='r')
+		ax2.text(x[0]-1, ROCK_DIST_THRESHOLD*1.02, 'Threshold value',fontsize=20)
 		if(metric>ROCK_TEST_THRESHOLD):
 			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
 		else:
@@ -95,6 +97,8 @@ def animate(frames):
 		# place a text box in upper left in axes coords
 		metric = (g_odom_error_count-fail_count)*100/g_odom_error_count
 		textstr = '% of waypoints within threshold: {:.2f}'.format(metric)
+		ax1.hlines(y=ODOM_ERROR_MEAN_THRESHOLD, xmin=x[0]-1, xmax=len(x), linestyle='--', color='r')
+		ax1.text(x[0]-1, ODOM_ERROR_MEAN_THRESHOLD*1.02, 'Threshold value',fontsize=20)
 		if(metric>ODOM_TEST_THRESHOLD):
 			props = dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
 		else:

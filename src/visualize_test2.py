@@ -27,23 +27,18 @@ local_least_euclidian_distances = []
 g_number_of_waypoints_within_threshold = 0
 global_waypoints_threshold_distance = 15	# distance in (m)
 local_waypoints_threshold_distance = 1	# distance in (m)
-g_local_waypoint_count = 0
+g_local_waypoint_count = 1
 g_local_waypoints = np.array([[0,0]])	#Random default initialization
 GLOBAL_MAP_RESOLUTION = 5
-GLOBAL_WAYPOINT_METRIC = 0.8	#80%
-LOCAL_WAYPOINT_METRIC = 0.6	#60%
+GLOBAL_WAYPOINT_METRIC = 80	#80%
+LOCAL_WAYPOINT_METRIC = 60	#60%
 
 #==========================================================================================================================================
-#ax1.set_title(r'Range VS Time')
-#ani = 1
-# global_waypoint_distance_values = []
-# global_waypoint_count = 0 	#to see how any entries range values has and then plot only when new values come
-# global_waypoints_mean_distance = 0
 
 def local_waypoint_callback(msg):
 	global g_local_waypoints
 	global g_local_waypoint_count
-	if(g_local_waypoint_count==0):
+	if(g_local_waypoint_count==1):
 		g_local_waypoints = np.array([[msg.x,msg.y]])
 	else:
 		g_local_waypoints = np.vstack((g_local_waypoints,np.array([[msg.x,msg.y]])))
@@ -71,6 +66,7 @@ def transform_global_waypoints(global_waypoints):
 
 def get_global_waypoints_data():
 	path = str(rospy.get_param("/visualization_path"))
+	# path = "/home/hash/catkin_ws/src/visualization"
 	# path = rospy.get_param("path")
 	pit_edges_file_name = path + "/data/pit_edges.csv"
 	global_waypoints_file_name = path + "/data/global_waypoints.csv"
@@ -128,8 +124,8 @@ def animate(frames):
 	ax1.set_xlabel('Global Waypoint number',fontsize=28)
 	set_font_size(ax1)
 	ax1.set_title('Distances of global waypoints from pit edge',fontsize=28)
-	ax1.hlines(y=global_waypoints_threshold_distance, xmin=-20, xmax=len(x), linestyle='--', color='r')
-	ax1.text(-18, global_waypoints_threshold_distance*1.02, 'Threshold value',fontsize=20)
+	ax1.hlines(y=global_waypoints_threshold_distance, xmin=x[0]-1, xmax=len(x), linestyle='--', color='r')
+	ax1.text(int(0.5*(len(x)+x[0])), global_waypoints_threshold_distance*1.02, 'Threshold value',fontsize=20)
 	# ax1.text(-20, global_waypoints_threshold_distance*1.02, 'Threshold distance: {:.2f}'.format(global_waypoints_threshold_distance),fontsize=20)
 
 	# place a text box in upper left in axes coords
@@ -153,7 +149,7 @@ def animate(frames):
 	if(g_local_waypoint_count<g_local_waypoints.shape[0]):
 		g_local_waypoint_count+=1
 		plot_len = min(g_local_waypoint_count,g_local_waypoints.shape[0])
-		ax2.clear()
+		ax3.clear()
 		pdb.set_trace()
 		local_least_euclidian_distances,number_of_waypoints_within_threshold = get_least_euclidian_distances(g_local_waypoints[0:plot_len,:],global_pit_edges,local_waypoints_threshold_distance)
 		# local_average = sum(local_least_euclidian_distances) / len(local_least_euclidian_distances)
@@ -180,6 +176,14 @@ def animate(frames):
 		ax3.set_xticklabels(local_x)
 		ax3.legend()
 		autolabel(rects2,ax3)	
+
+	# viz_path = "/home/hash/catkin_ws/src/visualization"
+	viz_path = str(rospy.get_param("/visualization_path"))
+	global_plan_file_path = viz_path + "/data/global_plan.png"
+	image = cv2.imread(global_plan_file_path)
+	ax4.imshow(image)
+	ax4.axis('off')
+
 
 	'''Plot Video'''
 	# pdb.set_trace()
