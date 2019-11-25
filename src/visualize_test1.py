@@ -69,7 +69,7 @@ def animate(frames):
 
 		# place a text box in upper left in axes coords
 		metric = (g_rock_dist_count-fail_count)*100/g_rock_dist_count
-		textstr = '% of times rover successfully avoids obstacles upto threshold distance limit: {:.2f}'.format(metric)
+		textstr = '% of times rover successfully avoids \n obstacles  upto threshold distance limit: {:.2f}'.format(metric)
 		ax2.hlines(y=ROCK_DIST_THRESHOLD, xmin=x[0]-1, xmax=len(x), linestyle='--', color='r')
 		ax2.text(x[0]-1, ROCK_DIST_THRESHOLD*1.02, 'Threshold value',fontsize=20)
 		if(metric>ROCK_TEST_THRESHOLD):

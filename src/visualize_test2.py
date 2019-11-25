@@ -211,7 +211,7 @@ def autolabel(rects,ax):
 if __name__ == '__main__':
 	rospy.init_node('visualize', anonymous=True)
 	# rospy.Subscriber("/global_waypoint_dist", Range, global_waypoint_dist_callback)
-	rospy.Subscriber("/apnapioneer3at/MultiSense_S21_meta_camera/image",Image,pit_image_callback)
+	rospy.Subscriber("/apnapioneer3at/MultiSense_S21_meta_camera/image",Image,pit_image_callback,queue_size=1)
 	rospy.Subscriber("/robot_at_edge_position",Odometry,local_waypoint_callback)
 	rate = rospy.Rate(50)
 	rospy.loginfo("In Main \n")
