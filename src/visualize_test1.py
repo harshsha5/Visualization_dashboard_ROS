@@ -117,6 +117,10 @@ if __name__ == '__main__':
 	rate = rospy.Rate(10)
 	rospy.loginfo("In Main \n")
 	ani = animation.FuncAnimation(fig,animate,frames = None,interval = 10)
+	count = 0
 	while not rospy.is_shutdown():
-		plt.show()
+		if(count%20 == 0):
+			plt.show()
+			count=0
 		rate.sleep()
+		count = count+1

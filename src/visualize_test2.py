@@ -12,9 +12,8 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import cv2
 from nav_msgs.msg import Odometry
-# import skvideo
-# # skvideo.setFFmpegPath('/usr/local/lib/python2.7/dist-packages/ffmpeg/')
-# import skvideo.io
+from webots_ros.srv import save_image
+import rosservice
 
 #=========================================================================================================================================
 
@@ -39,9 +38,9 @@ def local_waypoint_callback(msg):
 	global g_local_waypoints
 	global g_local_waypoint_count
 	if(g_local_waypoint_count==1):
-		g_local_waypoints = np.array([[msg.x,msg.y]])
+		g_local_waypoints = np.array([[msg.pose.pose.position.x,msg.pose.pose.position.y]])
 	else:
-		g_local_waypoints = np.vstack((g_local_waypoints,np.array([[msg.x,msg.y]])))
+		g_local_waypoints = np.vstack((g_local_waypoints,np.array([[msg.pose.pose.position.x,msg.pose.pose.position.y]])))
 
 def pit_image_callback(msg):			#Use the msg.flag to see if you need to keep publishing old message or use the new one
 	rospy.loginfo('Image received...')
@@ -80,6 +79,16 @@ def local_waypoints_callback(msg):			#Use the msg.flag to see if this is the las
 	rospy.loginfo('New local waypoint received...')
 	if(msg.flag):
 		local_least_euclidian_distances.append(np.asscalar(np.min(np.linalg.norm(np.array([msg.x,msg.y]) - global_pit_edges, axis=1))))
+
+def img_saver_client(file_path, quality=100):
+    rospy.wait_for_service('/apnapioneer3at/MultiSense_S21_meta_camera/save_image')
+    try:
+        save_img = rospy.ServiceProxy('/apnapioneer3at/MultiSense_S21_meta_camera/save_image', save_image)
+        resp1 = save_img(file_path, quality)
+        print("Image saved")
+        # return resp1.success
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
 
 def set_font_size(ax):
 	for label in (ax.get_xticklabels() + ax.get_yticklabels()):
@@ -176,6 +185,12 @@ def animate(frames):
 		ax3.set_xticklabels(local_x)
 		ax3.legend()
 		autolabel(rects2,ax3)	
+
+	if(count<5):
+		stro = "/home/hash/Desktop/" + str(count) + ".png"
+		img_saver_client(stro)
+		count+=1
+
 
 	# viz_path = "/home/hash/catkin_ws/src/visualization"
 	viz_path = str(rospy.get_param("/visualization_path"))
